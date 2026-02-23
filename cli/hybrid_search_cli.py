@@ -1,6 +1,7 @@
 import argparse
 
 from lib.constants import RRF_K
+from lib.gemini import spell_enhancment
 from lib.hybrid_search import HybridSearch, min_max_normalization
 from lib.utils import load_movies
 
@@ -11,7 +12,7 @@ def normalize(scores: list[int | float]):
         print(f"* {score:.4f}")
 
 
-def weighted_search(query, alpha, limit):
+def weighted_search(query: str, alpha: float, limit: int):
     hs = HybridSearch(load_movies())
     results = hs.weighted_search(query, alpha, limit)
 
@@ -24,9 +25,14 @@ def weighted_search(query, alpha, limit):
         print(f"   {doc['document']['description'][:100]}...")
 
 
-def rrf_search(query, k, limit):
+def rrf_search(query: str, k: int, limit: int, enhance_method: str):
+    if enhance_method:
+        enhanced_query = spell_enhancment(query)
+        print(f"Enhanced query ({enhance_method}): '{query}' -> '{enhanced_query}'\n")
+    else:
+        enhanced_query = query
     hs = HybridSearch(load_movies())
-    results = hs.rrf_search(query, k, limit)
+    results = hs.rrf_search(enhanced_query, k, limit)
 
     for i, (doc_id, doc) in enumerate(results, start=1):
         print(f"{i}. {doc['document']['title']}")
@@ -55,6 +61,12 @@ def main():
     rrf_search_parser.add_argument("query", type=str)
     rrf_search_parser.add_argument("-k", type=int, default=RRF_K)
     rrf_search_parser.add_argument("--limit", type=int, default=5)
+    rrf_search_parser.add_argument(
+        "--enhance",
+        type=str,
+        choices=["spell"],
+        help="Query enhancment method",
+    )
 
     args = parser.parse_args()
 
@@ -64,7 +76,7 @@ def main():
         case "weighted-search":
             weighted_search(args.query, args.alpha, args.limit)
         case "rrf-search":
-            rrf_search(args.query, args.k, args.limit)
+            rrf_search(args.query, args.k, args.limit, args.enhance)
         case _:
             parser.print_help()
 
